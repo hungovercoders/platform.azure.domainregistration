@@ -46,23 +46,44 @@ variable "unique_namespace" {
   description = "The is the unique namespace added to resources."
 }
 
+variable "eventhubs" {
+  description = "List of Event Hubs with their properties"
+  type = list(object({
+    domain_name = string
+    events = list(object({
+      name              = string
+      partition_count   = number
+      message_retention = number
+      consumer_groups   = list(string)
+    }))
+  }))
+  default = [
+    {
+      domain_name = "beer"
+      events = [
+        {
+          name              = "beer.cdc.pub.v1",
+          partition_count   = 4,
+          message_retention = 4,
+          consumer_groups   = ["beer.lake", "beer.pintreviews"]
+        },
+        {
+          name              = "beer.fct.pintreview.v1",
+          partition_count   = 4,
+          message_retention = 4,
+          consumer_groups   = ["beer.lake", "marketing.crm"]
+        }
+      ]
+    }
+  ]
+}
+
+
 locals {
-  region_shortcode                  = (var.region == "northeurope" ? "eun" : var.region == "westeurope" ? "euw" : "unk")
-  environment_shortcode             = (var.environment == "learning" ? "lrn" : var.environment == "development" ? "dev" : var.environment == "production" ? "prd" : "unk")
-  resource_group_name               = "${local.environment_shortcode}-${var.domain}-rg-${var.unique_namespace}"
-  storage_account_name              = "${local.environment_shortcode}${var.domain}sa${local.region_shortcode}${var.unique_namespace}"
-  eventhub_namespace_name           = "${local.environment_shortcode}-${var.team}-ehns-${local.region_shortcode}-${var.unique_namespace}"
-  databricks_workspace_name         = "${local.environment_shortcode}-${var.team}-dbw-${local.region_shortcode}-${var.unique_namespace}"
-  databricks_workspace_rg           = "databricks-rg-${local.resource_group_name}"
-  databricks_premium_workspace_name = "${local.environment_shortcode}-${var.team}-dbwp-${local.region_shortcode}-${var.unique_namespace}"
-  databricks_premium_workspace_rg   = "databricks-premium-rg-${local.resource_group_name}"
-  cosmos_sql_name                   = "${local.environment_shortcode}-${var.domain}-cosdbsql-${local.region_shortcode}-${var.unique_namespace}"
-  cosmos_mon_name                   = "${local.environment_shortcode}-${var.domain}-cosdbmon-${local.region_shortcode}-${var.unique_namespace}"
-  apim_name                         = "${local.environment_shortcode}-${var.organisation}-apim-${local.region_shortcode}-${var.unique_namespace}"
-  acr_name                          = "${local.environment_shortcode}${var.organisation}acr${local.region_shortcode}${var.unique_namespace}"
-  key_vault_name                    = "${local.environment_shortcode}-${var.domain}-kv-${local.region_shortcode}-${var.unique_namespace}"
-  data_factory_name                 = "${local.environment_shortcode}-${var.domain}-adf-${local.region_shortcode}-${var.unique_namespace}"
-  cognitive_search_name             = "${local.environment_shortcode}-${var.domain}-cogsrch-${local.region_shortcode}-${var.unique_namespace}"
+  region_shortcode        = (var.region == "northeurope" ? "eun" : var.region == "westeurope" ? "euw" : "unk")
+  environment_shortcode   = (var.environment == "learning" ? "lrn" : var.environment == "development" ? "dev" : var.environment == "production" ? "prd" : "unk")
+  resource_group_name     = "${local.environment_shortcode}-events001-rg-${var.unique_namespace}"
+  eventhub_namespace_name = "${local.environment_shortcode}-events001-ehns-${local.region_shortcode}-${var.unique_namespace}"
 
   tags = {
     environment  = var.environment
@@ -70,4 +91,36 @@ locals {
     team         = var.team
     domain       = var.domain
   }
+
+  flattened_eventhubs = flatten([
+    for domain in var.eventhubs : [
+      for event in domain.events : {
+        domain_name       = domain.domain_name
+        name              = event.name
+        partition_count   = event.partition_count
+        message_retention = event.message_retention
+        consumer_groups   = event.consumer_groups
+        tags = {
+          environment  = var.environment
+          organisation = var.organisation
+          team         = domain.domain_name
+          domain       = domain.domain_name
+        }
+      }
+    ]
+  ])
+}
+
+locals {
+  flattened_consumer_groups = flatten([
+    for domain in var.eventhubs : [
+      for event in domain.events : [
+        for cg in event.consumer_groups : {
+          domain_name    = domain.domain_name
+          eventhub_name  = event.name
+          consumer_group = cg
+        }
+      ]
+    ]
+  ])
 }
