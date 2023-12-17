@@ -92,6 +92,8 @@ locals {
     domain       = var.domain
   }
 
+  unique_domains = { for eh in var.eventhubs : eh.domain_name => eh.domain_name }
+
   flattened_eventhubs = flatten([
     for domain in var.eventhubs : [
       for event in domain.events : {

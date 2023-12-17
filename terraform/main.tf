@@ -13,6 +13,21 @@ resource "azurerm_eventhub_namespace" "ehns" {
   tags                = local.tags
 }
 
+resource "azurerm_storage_account" "data_lake" {
+  for_each = local.unique_domains
+
+  name                     = each.value # Naming the storage account based on the domain name
+  resource_group_name      = azurerm_resource_group.rg.name
+  location                 = "North Europe" # Replace with your desired location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+  account_kind             = "StorageV2"
+
+  is_hns_enabled = true # Enable Hierarchical Namespace for Data Lake Storage Gen2
+
+  # Add other necessary configurations as needed
+}
+
 resource "azurerm_eventhub" "example" {
   for_each = { for eh in local.flattened_eventhubs : eh.name => eh }
 
