@@ -65,19 +65,35 @@ variable "eventhubs" {
           name              = "beer.cdc.pub.v1",
           partition_count   = 4,
           message_retention = 4,
-          consumer_groups   = ["beer.lake", "beer.pintreviews"]
+          consumer_groups   = ["beer.lake", "beer.reviews"]
         },
         {
-          name              = "beer.fct.pintreview.v1",
+          name              = "beer.fct.review.v1",
           partition_count   = 4,
           message_retention = 4,
           consumer_groups   = ["beer.lake", "marketing.crm"]
         }
       ]
+    },
+    {
+      domain_name = "whiskey"
+      events = [
+        {
+          name              = "whiskey.cdc.distillery.v1",
+          partition_count   = 4,
+          message_retention = 4,
+          consumer_groups   = ["whiskey.lake", "whiskey.reviews"]
+        },
+        {
+          name              = "whiskey.fct.review.v1",
+          partition_count   = 4,
+          message_retention = 4,
+          consumer_groups   = ["whiskey.lake", "marketing.crm"]
+        }
+      ]
     }
   ]
 }
-
 
 locals {
   region_shortcode        = (var.region == "northeurope" ? "eun" : var.region == "westeurope" ? "euw" : "unk")
